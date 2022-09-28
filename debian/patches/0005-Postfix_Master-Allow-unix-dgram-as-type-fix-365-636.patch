@@ -1,0 +1,53 @@
+From: =?utf-8?q?Rapha=C3=ABl_Pinson?= <raphael.pinson@camptocamp.com>
+Date: Fri, 28 Jun 2019 16:27:57 +0200
+Subject: Postfix_Master: Allow unix-dgram as type (fix #365) (#636)
+
+---
+ lenses/postfix_master.aug            |  2 +-
+ lenses/tests/test_postfix_master.aug | 16 +++++++++++++++-
+ 2 files changed, 16 insertions(+), 2 deletions(-)
+
+diff --git a/lenses/postfix_master.aug b/lenses/postfix_master.aug
+index a08aec2..93b7c52 100644
+--- a/lenses/postfix_master.aug
++++ b/lenses/postfix_master.aug
+@@ -37,7 +37,7 @@ let field (l:string) (r:regexp)
+  *************************************************************************)
+ 
+ let entry     = [ key word . ws
+-                . field "type"         /inet|unix|fifo|pass/  . ws
++                . field "type"         /inet|unix(-dgram)?|fifo|pass/  . ws
+                 . field "private"      bool                   . ws
+                 . field "unprivileged" bool                   . ws
+                 . field "chroot"       bool                   . ws
+diff --git a/lenses/tests/test_postfix_master.aug b/lenses/tests/test_postfix_master.aug
+index 3a52792..356ce1b 100644
+--- a/lenses/tests/test_postfix_master.aug
++++ b/lenses/tests/test_postfix_master.aug
+@@ -31,7 +31,7 @@ cyrus     unix  -       n       n       -       -       pipe
+   flags=R user=cyrus argv=/usr/sbin/cyrdeliver -e -m \"${extension}\" ${user}
+ "
+ 
+-test Postfix_Master.lns get conf2 = 
++test Postfix_Master.lns get conf2 =
+   { "#comment" = "The Cyrus deliver program has changed incompatibly, multiple times." }
+   { "cyrus"
+     { "type" = "unix" }
+@@ -125,3 +125,17 @@ test Postfix_Master.lns get conf7 =
+      { "wakeup" = "-" }
+      { "limit" = "-" }
+      { "command" = "smtpd\n  -o mynetworks=127.0.0.1/8,[::1]" } }
++
++(* Ticket #635 *)
++let conf8 = "postlog   unix-dgram n  -       n       -       1       postlogd\n"
++
++test Postfix_Master.lns get conf8 =
++  { "postlog"
++    { "type" = "unix-dgram" }
++    { "private" = "n" }
++    { "unprivileged" = "-" }
++    { "chroot" = "n" }
++    { "wakeup" = "-" }
++    { "limit" = "1" }
++    { "command" = "postlogd" } }
++
